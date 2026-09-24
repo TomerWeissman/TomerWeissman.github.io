@@ -1,0 +1,25 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Hero from "../components/Hero.astro";
+import ProjectRow from "../components/ProjectRow.astro";
+import { getProjects } from "../utils";
+
+const projects = await getProjects();
+// Featured projects first; fall back to the most recent if none are marked
+const featured = projects.filter((p) => p.data.featured);
+const selected = (featured.length ? featured : projects).slice(0, 4);
+---
+
+<BaseLayout>
+  <Hero />
+
+  <div class="section-head">
+    <h2>Selected work</h2>
+    <a href="/projects/">All projects →</a>
+  </div>
+  {selected.length > 0 ? (
+    <ul class="project-list">{selected.map((project) => <ProjectRow project={project} />)}</ul>
+  ) : (
+    <p class="empty muted">Projects are on the way.</p>
+  )}
+</BaseLayout>

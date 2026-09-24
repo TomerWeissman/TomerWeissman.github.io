@@ -1,0 +1,15 @@
+---
+// Single image with caption; click to zoom. `src` is a path under /public.
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+}
+
+const { src, alt, caption } = Astro.props;
+---
+
+<figure>
+  <div class="frame" data-zoom><img src={src} alt={alt} loading="lazy" /></div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

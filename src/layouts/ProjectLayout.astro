@@ -1,0 +1,43 @@
+---
+import "katex/dist/katex.min.css";
+import BaseLayout from "./BaseLayout.astro";
+import LinkButtons from "../components/LinkButtons.astro";
+import Metrics from "../components/mdx/Metrics.astro";
+import { formatMonthYear, type Project } from "../utils";
+
+interface Props {
+  project: Project;
+}
+
+const { title, summary, date, role, stack, tags, links, metrics, cover } = Astro.props.project.data;
+---
+
+<BaseLayout title={title} description={summary} image={cover}>
+  <article class="prose-width project-article">
+    <div class="page-top"><a class="back" href="/projects/">← All projects</a></div>
+
+    <header class="project-header">
+      <h1>{title}</h1>
+      <p class="summary">{summary}</p>
+      <dl class="meta">
+        <div><dt>Date</dt><dd>{formatMonthYear(date)}</dd></div>
+        {role && <div><dt>Role</dt><dd>{role}</dd></div>}
+        {stack && <div><dt>Stack</dt><dd>{stack.join(", ")}</dd></div>}
+        {tags.length > 0 && <div><dt>Topics</dt><dd>{tags.join(", ")}</dd></div>}
+      </dl>
+      <LinkButtons links={links} />
+    </header>
+
+    {metrics && <Metrics items={metrics} />}
+
+    <div class="prose">
+      <slot />
+    </div>
+  </article>
+
+  <dialog class="zoom" aria-label="Enlarged figure"></dialog>
+</BaseLayout>
+
+<script>
+  import "../scripts/project-page.ts";
+</script>

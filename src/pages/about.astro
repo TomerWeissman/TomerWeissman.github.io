@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { about, site } from "../site.config";
+
+const timeline = [
+  { heading: "Experience", items: about.experience },
+  { heading: "Education", items: about.education },
+];
+---
+
+<BaseLayout title="About" description={`About ${site.name}: background, experience, and skills.`}>
+  <section class="page-top">
+    <h1>About</h1>
+  </section>
+
+  <div class="about-grid">
+    <div>
+      {about.bio.map((paragraph, i) => <p class={i === 0 ? "bio-lead" : "muted"}>{paragraph}</p>)}
+
+      {timeline.map(({ heading, items }) => (
+        <>
+          <h2>{heading}</h2>
+          <ul class="timeline">
+            {items.map((item) => (
+              <li>
+                <span class="when">{item.when}</span>
+                <div>
+                  <div class="role">{item.role}</div>
+                  <div class="org">{item.org}</div>
+                  <p>{item.summary}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      ))}
+
+      <h2 id="contact">Contact</h2>
+      <p>
+        The best way to reach me is email: <a href={`mailto:${site.email}`}>{site.email}</a>. I'm also on
+        <a href={site.links.github}>GitHub</a> and <a href={site.links.linkedin}>LinkedIn</a>.
+      </p>
+    </div>
+
+    <aside>
+      {Object.entries(about.skills).map(([group, skills]) => (
+        <div class="skill-group">
+          <h3>{group}</h3>
+          <div class="tags">{skills.map((skill) => <span class="tag">{skill}</span>)}</div>
+        </div>
+      ))}
+      <div class="aside-card">
+        <a href={site.links.github}>GitHub ↗</a>
+        <a href={site.links.linkedin}>LinkedIn ↗</a>
+      </div>
+    </aside>
+  </div>
+</BaseLayout>

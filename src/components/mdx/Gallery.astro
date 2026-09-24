@@ -1,0 +1,20 @@
+---
+// Several images side by side; each one zooms on click.
+interface Props {
+  images: { src: string; alt: string }[];
+  caption?: string;
+  columns?: number;
+}
+
+const { images, caption, columns } = Astro.props;
+const style = columns ? `grid-template-columns: repeat(${columns}, 1fr)` : undefined;
+---
+
+<figure>
+  <div class="gallery" style={style}>
+    {images.map((image) => (
+      <div class="frame" data-zoom><img src={image.src} alt={image.alt} loading="lazy" /></div>
+    ))}
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

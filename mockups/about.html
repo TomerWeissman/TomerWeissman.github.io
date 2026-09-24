@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>About — Tomer Weissman</title>
+  <script>try{const t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="mockup-banner">Mockup · placeholder content · <a href="index.html">Home</a> · <a href="projects.html">Projects</a> · <a href="project.html">Project page</a> · <a href="about.html">About</a> · Hero FX: <a href="hero-1-gradient.html">1</a> <a href="hero-2-attention.html">2</a> <a href="hero-3-forecast.html">3</a> <a href="hero-4-boundary.html">4</a> <a href="hero-5-network.html">5</a></div>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html">Tomer Weissman</a>
+      <nav class="nav">
+        <a href="projects.html">Projects</a>
+        <a href="about.html" aria-current="page">About</a>
+        <a href="#contact">Contact</a>
+        <button class="theme-toggle" aria-label="Toggle theme"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="page-top">
+      <h1>About</h1>
+    </section>
+
+    <div class="about-grid">
+      <div>
+        <p style="font-size:1.15rem;">Placeholder bio. In the real build this is drafted from your resume: two or three sentences on what you work on, what you care about, and what you're looking for.</p>
+        <p class="muted">A second paragraph can cover background, such as education, how you got into ML, and the kinds of problems you like.</p>
+
+        <h2>Experience</h2>
+        <ul class="timeline">
+          <li>
+            <span class="when">2025 — Present</span>
+            <div><div class="role">ML Engineer</div><div class="org">Company Name</div><p>One or two lines on the work and its impact.</p></div>
+          </li>
+          <li>
+            <span class="when">2024 — 2025</span>
+            <div><div class="role">ML Research Intern</div><div class="org">Lab or Company</div><p>One or two lines on the work and its impact.</p></div>
+          </li>
+          <li>
+            <span class="when">2020 — 2024</span>
+            <div><div class="role">B.S. Degree</div><div class="org">University</div><p>Relevant coursework or thesis.</p></div>
+          </li>
+        </ul>
+
+        <h2 id="contact">Contact</h2>
+        <p>The best way to reach me is by email at <a href="mailto:weissmantomer@gmail.com">weissmantomer@gmail.com</a>. I'm also on <a href="https://github.com/TomerWeissman">GitHub</a> and <a href="#">LinkedIn</a>.</p>
+      </div>
+
+      <aside>
+        <div class="skill-group">
+          <h3>ML</h3>
+          <div class="tags"><span class="tag">PyTorch</span><span class="tag">scikit-learn</span><span class="tag">LLMs</span><span class="tag">evaluation</span></div>
+        </div>
+        <div class="skill-group">
+          <h3>Engineering</h3>
+          <div class="tags"><span class="tag">Python</span><span class="tag">SQL</span><span class="tag">Docker</span><span class="tag">AWS</span></div>
+        </div>
+        <div class="skill-group">
+          <h3>Data</h3>
+          <div class="tags"><span class="tag">pandas</span><span class="tag">statistics</span><span class="tag">A/B testing</span></div>
+        </div>
+        <div class="aside-card">
+          <a href="resume.pdf">Download resume (PDF) ↓</a>
+          <a href="https://github.com/TomerWeissman">GitHub ↗</a>
+          <a href="#">LinkedIn ↗</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Tomer Weissman</span>
+      <span><a href="mailto:weissmantomer@gmail.com">Email</a><a href="https://github.com/TomerWeissman">GitHub</a><a href="#">LinkedIn</a></span>
+    </div>
+  </footer>
+  <script src="site.js"></script>
+</body>
+</html>

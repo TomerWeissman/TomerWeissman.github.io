@@ -1,0 +1,23 @@
+---
+import { site } from "../site.config";
+---
+
+<section class="hero fx-hero">
+  <canvas class="fx-canvas" aria-hidden="true"></canvas>
+  <div class="hero-content">
+    <div class="eyebrow">{site.headline}</div>
+    <h1>{site.name}</h1>
+    <p class="lede">{site.intro}</p>
+    <div class="hero-links">
+      <a href="/projects/">View projects →</a>
+      <a href={site.links.github}>GitHub</a>
+      <a href={site.links.linkedin}>LinkedIn</a>
+    </div>
+  </div>
+  <div class="fx-caption">rbf kernel classifier · cursor is a training point · click to flip</div>
+</section>
+
+<script>
+  import { startBoundary } from "../scripts/fx/boundary.js";
+  startBoundary();
+</script>

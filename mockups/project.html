@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Example Project — Tomer Weissman</title>
+  <script>try{const t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="mockup-banner">Mockup · placeholder content · <a href="index.html">Home</a> · <a href="projects.html">Projects</a> · <a href="project.html">Project page</a> · <a href="about.html">About</a> · Hero FX: <a href="hero-1-gradient.html">1</a> <a href="hero-2-attention.html">2</a> <a href="hero-3-forecast.html">3</a> <a href="hero-4-boundary.html">4</a> <a href="hero-5-network.html">5</a></div>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html">Tomer Weissman</a>
+      <nav class="nav">
+        <a href="projects.html" aria-current="page">Projects</a>
+        <a href="about.html">About</a>
+        <a href="about.html#contact">Contact</a>
+        <button class="theme-toggle" aria-label="Toggle theme"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <article class="prose-width" style="margin: 0 auto;">
+      <div class="page-top"><a class="back" href="projects.html">← All projects</a></div>
+
+      <!-- Everything in this header is generated from the project file's frontmatter -->
+      <header class="project-header">
+        <h1>Example Project: Paper Replication</h1>
+        <p class="summary">Reproducing a published model end to end: data pipeline, training, and evaluation against the reported numbers.</p>
+        <dl class="meta">
+          <div><dt>Date</dt><dd>March 2026</dd></div>
+          <div><dt>Role</dt><dd>Solo project</dd></div>
+          <div><dt>Stack</dt><dd>Python, PyTorch, pandas</dd></div>
+        </dl>
+        <div class="link-buttons">
+          <a class="btn" href="#">GitHub ↗</a>
+          <a class="btn" href="#">Paper ↗</a>
+          <a class="btn" href="#">Colab ↗</a>
+          <a class="btn" href="#">Slides ↗</a>
+        </div>
+      </header>
+
+      <div class="metrics">
+        <div class="metric"><div class="value">0.91</div><div class="label">F1 (paper: 0.92)</div></div>
+        <div class="metric"><div class="value">12.4</div><div class="label">RMSE mg/dL</div></div>
+        <div class="metric"><div class="value">40 ms</div><div class="label">Inference latency</div></div>
+      </div>
+
+      <div class="prose">
+        <h2>Overview</h2>
+        <p>This is where the long-form write-up goes. You write it in Markdown, so paragraphs, <strong>bold</strong>, <em>italics</em>, <a href="#">links</a>, and <code>inline code</code> all work. Every section below is a building block you can use in any project page.</p>
+
+        <h2>Demo</h2>
+        <div class="video">
+          <div class="placeholder-img" style="position:absolute;inset:0;color:#bbb;">▶ YouTube / Vimeo embed</div>
+        </div>
+        <figcaption>Walkthrough of the pipeline. Rendered from <code>&lt;Video src="https://youtu.be/..." /&gt;</code></figcaption>
+
+        <h2>Architecture</h2>
+        <p>Diagrams are written as text in Mermaid and rendered on the page. They follow the light/dark theme.</p>
+        <div class="mermaid-wrap"><pre class="mermaid">
+flowchart LR
+  A[Raw data] --> B[Preprocessing]
+  B --> C[Feature windows]
+  C --> D[Model]
+  D --> E[Evaluation]
+  E --> F[Comparison to paper]
+        </pre></div>
+
+        <h2>Method</h2>
+        <p>Math renders with KaTeX. Inline, like $\hat{y}_t = f_\theta(x_{t-k:t})$, or as a block:</p>
+        <p>$$\mathcal{L}(\theta) = \frac{1}{N}\sum_{i=1}^{N} \left( y_i - f_\theta(x_i) \right)^2 + \lambda \lVert \theta \rVert_2^2$$</p>
+
+        <div class="callout">
+          <div class="callout-title">Note</div>
+          <p>Callouts are for asides: assumptions, caveats, or where the replication departed from the paper.</p>
+        </div>
+
+        <h3>Training loop</h3>
+<pre class="code"><code><span class="tok-k">for</span> epoch <span class="tok-k">in</span> range(cfg.epochs):
+    <span class="tok-k">for</span> x, y <span class="tok-k">in</span> loader:
+        loss = criterion(model(x), y)  <span class="tok-c"># MSE + L2 via weight_decay</span>
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()</code></pre>
+
+        <h2>Results</h2>
+        <table>
+          <thead><tr><th>Model</th><th class="num">RMSE</th><th class="num">MAE</th><th class="num">Paper RMSE</th></tr></thead>
+          <tbody>
+            <tr><td>Baseline (persistence)</td><td class="num">21.3</td><td class="num">15.8</td><td class="num">21.0</td></tr>
+            <tr><td>LSTM</td><td class="num">14.1</td><td class="num">10.2</td><td class="num">13.8</td></tr>
+            <tr class="best"><td>Transformer</td><td class="num">12.4</td><td class="num">9.1</td><td class="num">12.2</td></tr>
+          </tbody>
+        </table>
+
+        <figure>
+          <div class="frame"><div class="placeholder-img">figure.png (click to zoom)</div></div>
+          <figcaption>Figure 1. Predicted vs. actual values on the held-out set.</figcaption>
+        </figure>
+
+        <figure>
+          <div class="gallery">
+            <div class="frame"><div class="placeholder-img">loss curve</div></div>
+            <div class="frame"><div class="placeholder-img">error histogram</div></div>
+            <div class="frame"><div class="placeholder-img">ablation</div></div>
+          </div>
+          <figcaption>Gallery: several figures side by side.</figcaption>
+        </figure>
+
+        <div class="callout">
+          <div class="callout-title">Result</div>
+          <p>Reproduced the reported RMSE to within 0.2 mg/dL.</p>
+        </div>
+
+        <h2>Takeaways</h2>
+        <ul>
+          <li>What matched the paper, and what didn't</li>
+          <li>Engineering decisions and why</li>
+          <li>What I'd do next</li>
+        </ul>
+      </div>
+    </article>
+  </main>
+
+  <dialog class="zoom"></dialog>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Tomer Weissman</span>
+      <span><a href="mailto:weissmantomer@gmail.com">Email</a><a href="https://github.com/TomerWeissman">GitHub</a><a href="#">LinkedIn</a></span>
+    </div>
+  </footer>
+
+  <script src="site.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.querySelector('.prose'),{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    const el = document.querySelector(".mermaid");
+    const source = el.textContent;
+    const isDark = () => getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() === "#121212";
+    async function render() {
+      el.removeAttribute("data-processed");
+      el.textContent = source;
+      mermaid.initialize({ startOnLoad: false, theme: isDark() ? "dark" : "neutral", fontFamily: "Inter" });
+      await mermaid.run({ nodes: [el] });
+    }
+    render();
+    document.addEventListener("themechange", render);
+  </script>
+</body>
+</html>

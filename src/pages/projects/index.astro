@@ -1,0 +1,44 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProjectRow from "../../components/ProjectRow.astro";
+import { getProjects } from "../../utils";
+
+const projects = await getProjects();
+// Tags sorted by how many projects use them
+const counts = new Map<string, number>();
+projects.flatMap((p) => p.data.tags).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
+const tags = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
+---
+
+<BaseLayout title="Projects" description="Research replications, tooling, and applied ML work.">
+  <section class="page-top">
+    <h1>Projects</h1>
+    <p class="muted prose-width">Research replications, tooling, and applied ML work. Each one has a write-up with results, diagrams, and code.</p>
+    {tags.length > 1 && (
+      <div class="filters" role="group" aria-label="Filter by topic">
+        <button class="filter active" type="button" data-tag="all">All</button>
+        {tags.map((tag) => <button class="filter" type="button" data-tag={tag}>{tag}</button>)}
+      </div>
+    )}
+  </section>
+
+  {projects.length > 0 ? (
+    <ul class="project-list">{projects.map((project) => <ProjectRow project={project} />)}</ul>
+  ) : (
+    <p class="empty muted">Projects are on the way.</p>
+  )}
+</BaseLayout>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>(".filter");
+  const rows = document.querySelectorAll<HTMLElement>(".project-row");
+  buttons.forEach((button) =>
+    button.addEventListener("click", () => {
+      buttons.forEach((b) => b.classList.toggle("active", b === button));
+      const tag = button.dataset.tag!;
+      rows.forEach((row) => {
+        row.hidden = tag !== "all" && !row.dataset.tags!.split(",").includes(tag);
+      });
+    })
+  );
+</script>

@@ -1,0 +1,24 @@
+---
+interface Props {
+  links: Partial<Record<string, string>>;
+}
+
+const labels: Record<string, string> = {
+  github: "GitHub",
+  paper: "Paper",
+  demo: "Live demo",
+  huggingface: "Hugging Face",
+  colab: "Colab",
+  slides: "Slides",
+  video: "Video",
+};
+const entries = Object.entries(Astro.props.links).filter(([, url]) => url);
+---
+
+{entries.length > 0 && (
+  <div class="link-buttons">
+    {entries.map(([key, url]) => (
+      <a class="btn" href={url} target="_blank" rel="noopener">{labels[key] ?? key} ↗</a>
+    ))}
+  </div>
+)}

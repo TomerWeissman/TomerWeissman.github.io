@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tomer Weissman — ML Engineer</title>
+  <script>try{const t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch{}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="mockup-banner">Mockup · placeholder content · <a href="index.html">Home</a> · <a href="projects.html">Projects</a> · <a href="project.html">Project page</a> · <a href="about.html">About</a> · Hero FX: <a href="hero-1-gradient.html">1</a> <a href="hero-2-attention.html">2</a> <a href="hero-3-forecast.html">3</a> <a href="hero-4-boundary.html">4</a> <a href="hero-5-network.html">5</a></div>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html">Tomer Weissman</a>
+      <nav class="nav">
+        <a href="projects.html">Projects</a>
+        <a href="about.html">About</a>
+        <a href="about.html#contact">Contact</a>
+        <button class="theme-toggle" aria-label="Toggle theme"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="eyebrow">ML Engineer</div>
+      <h1>Tomer Weissman</h1>
+      <p class="lede">I build and evaluate machine learning systems, from reproducing research results to shipping models that hold up in production.</p>
+      <div class="hero-links">
+        <a href="projects.html">View projects →</a>
+        <a href="resume.pdf">Resume</a>
+        <a href="https://github.com/TomerWeissman">GitHub</a>
+        <a href="#">LinkedIn</a>
+      </div>
+    </section>
+
+    <div class="section-head">
+      <h2>Selected work</h2>
+      <a href="projects.html">All projects →</a>
+    </div>
+    <ul class="project-list">
+      <li class="project-row" data-tags="replication,time-series">
+        <a href="project.html">
+          <h3 class="project-title">Example Project: Paper Replication</h3>
+          <span class="project-year">2026</span>
+          <p class="project-summary">Reproducing a published model end to end: data pipeline, training, and evaluation against the reported numbers.</p>
+          <div class="tags"><span class="tag">replication</span><span class="tag">time-series</span><span class="tag">pytorch</span></div>
+        </a>
+      </li>
+      <li class="project-row" data-tags="llm,evaluation">
+        <a href="project.html">
+          <h3 class="project-title">Example Project: LLM Evaluation Harness</h3>
+          <span class="project-year">2026</span>
+          <p class="project-summary">A reproducible harness for benchmarking agent behavior across tasks, with automated scoring and regression tracking.</p>
+          <div class="tags"><span class="tag">llm</span><span class="tag">evaluation</span><span class="tag">agents</span></div>
+        </a>
+      </li>
+      <li class="project-row" data-tags="experimentation">
+        <a href="project.html">
+          <h3 class="project-title">Example Project: A/B Testing Engine</h3>
+          <span class="project-year">2025</span>
+          <p class="project-summary">Sequential testing and variance reduction for online experiments, packaged as a small library.</p>
+          <div class="tags"><span class="tag">statistics</span><span class="tag">experimentation</span></div>
+        </a>
+      </li>
+    </ul>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Tomer Weissman</span>
+      <span><a href="mailto:weissmantomer@gmail.com">Email</a><a href="https://github.com/TomerWeissman">GitHub</a><a href="#">LinkedIn</a></span>
+    </div>
+  </footer>
+  <script src="site.js"></script>
+</body>
+</html>

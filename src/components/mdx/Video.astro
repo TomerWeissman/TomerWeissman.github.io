@@ -1,0 +1,37 @@
+---
+// Responsive YouTube / Vimeo embed. Pass any normal share URL.
+interface Props {
+  src: string;
+  title?: string;
+  caption?: string;
+}
+
+const { src, title = "Video", caption } = Astro.props;
+
+function toEmbedUrl(url: string): string {
+  const u = new URL(url);
+  const host = u.hostname.replace(/^www\./, "");
+  if (host === "youtu.be") return `https://www.youtube-nocookie.com/embed/${u.pathname.slice(1)}`;
+  if (host.endsWith("youtube.com")) {
+    const id = u.searchParams.get("v") ?? u.pathname.split("/").filter(Boolean).pop();
+    return `https://www.youtube-nocookie.com/embed/${id}`;
+  }
+  if (host.endsWith("vimeo.com")) {
+    const id = u.pathname.split("/").filter(Boolean).pop();
+    return `https://player.vimeo.com/video/${id}`;
+  }
+  throw new Error(`<Video>: unsupported URL "${url}" — use a YouTube or Vimeo link`);
+}
+---
+
+<figure>
+  <div class="video">
+    <iframe
+      src={toEmbedUrl(src)}
+      title={title}
+      loading="lazy"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+      allowfullscreen></iframe>
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
