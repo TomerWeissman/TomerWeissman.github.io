@@ -1,6 +1,6 @@
 ---
-title: "Situation-Aware Uncertainty for Glucose Forecasts"
-summary: A 60-minute glucose forecast turns out to be near its accuracy ceiling, so I made its uncertainty honest instead, one glucose situation at a time. A learned encoder shows why this works.
+title: "When Can You Trust a Glucose Forecast?"
+summary: "A one-hour blood sugar forecast comes with a range that promises to hold the real value 80% of the time. A common way of drawing that range breaks that promise in specific moments, like a fast rise. I fixed it by sizing the range separately for each kind of moment, and the fix held in 8 outside studies (153 patients) that I never used to design it."
 date: 2026-10-17
 tags: [uncertainty, time-series, healthcare, pytorch]
 featured: true
@@ -10,170 +10,125 @@ cover: /projects/situation-aware-uncertainty/cover.png
 links:
   github: https://github.com/TomerWeissman/capstone
 metrics:
-  - { label: "Points from the 80% target on unseen data (was 6.7)", value: "3.9" }
-  - { label: "Band width in mg/dL, same data (was 99)", value: "87" }
-  - { label: "Error left with unlimited data", value: "98%" }
-  - { label: "Encoder summary explained by level + trend", value: "87%" }
+  - { label: "Average gap from 80% across situations, second dataset (lower is better)", value: "6.7 → 3.9" }
+  - { label: "Outside studies where it held (153 patients)", value: "8 of 8" }
+  - { label: "Improvement over the GARCH range in those studies", value: "29–67%" }
 ---
 
-## The question
+## In short
 
-This project picks up where my [GLIMMER replication](/projects/azt1d-replication/) left off. Reweighting the training loss toward dangerous glucose values traded overall accuracy for danger-zone accuracy. It did not make the forecast better overall. That raised two questions:
+People with type 1 diabetes wear a sensor that reads their blood sugar every 5 minutes. From the last two hours of readings, a model can forecast where blood sugar will be an hour from now. Those forecasts have an average error of 30 to 40 mg/dL (the unit sensors report; the target range is about 70 to 180).
 
-1. **Is there much accuracy left to get?** If a 60-minute forecast is already close to what the data allows, chasing lower error is the wrong goal.
-2. **If not, can the forecast at least tell you how much to trust it?** An uncertainty band that says "80% of the time the true value lands in here" is only useful if the 80% is true when it matters: when glucose is falling fast toward a low, not just on average.
+Since no forecast is exact, it helps to show a range around it: "probably between 100 and 160." An **80% range** makes a promise. Out of 100 forecasts, about 80 real readings should land inside it.
 
-The short answer: there is little accuracy left to get with this kind of data. Standard uncertainty bands are right on average and wrong in specific situations. Sizing the band separately for each **glucose situation** (current level × 30-minute trend) fixes that, and it holds on a dataset the method was never tuned on. A learned encoder, given the raw 2-hour window, ends up describing it mostly in those same two terms: level and direction.
+A common way of drawing this range keeps the promise on average but breaks it in particular moments. In one dataset, when blood sugar was in range and climbing fast, it caught only 64% of readings. In other moments it caught 95%, so it was wider than it needed to be. I sized the range separately for each kind of moment, and it came closer to 80% in most kinds of moment. I designed the method on one dataset, tested it on a second, and then checked it on 8 more studies I had never touched. It held in all 8.
 
 <Callout title="Status">
-This is ongoing capstone research toward a paper. Every hypothesis was registered with a pass/fail rule before it ran, and negative results are kept and reported. Most results use one training seed per model, so treat them as preliminary unless I say they were stress-tested.
+This is ongoing capstone research. I wrote a pass/fail rule for each test before running it, and I report the tests that failed. Results on one or two datasets come from a single training run per model, so treat them as preliminary. The 8-study check is the strongest evidence here.
 </Callout>
 
-## Setup
+## Why this matters
 
-- **Data:** [AZT1D](https://doi.org/10.17632/gk9m674wcx.1) (25 patients), OhioT1DM via [MetaboNet](https://arxiv.org/abs/2601.11505) (12), HUPA-UCM (25), plus 8 simulated patients for a known-answer test.
-- **Forecaster:** a per-patient CNN-LSTM. Two hours of CGM, insulin, and carbs in; glucose 60 minutes ahead out.
-- **Splits:** chronological per patient. Train, then validation (used to size the bands), then a held-out test period that never touches fitting or calibration.
-- **Target:** 80% bands. The main score is the average distance between the share of readings caught and 80%, measured separately in each situation.
+A pump or phone app can act on a forecast: if a low is coming, there's time to eat or pause insulin. The range decides when to worry. If it's too narrow in some situations, like a fast climb, a coming high looks safe. If it's too wide in others, the app warns about lows and highs that never come, and people learn to ignore it.
 
-## Part 1: How much more accuracy is there?
+I describe each moment by two things a person already sees on their sensor screen:
 
-### More data barely helps
+- **Level:** under 70, 70 to 120, 120 to 180, 180 to 250, or over 250.
+- **Direction over the last 30 minutes:** falling fast, falling slowly, flat, rising slowly, or rising fast.
 
-I retrained every patient's model on 10%, 20%, 35%, 60%, and 100% of their training data (two seeds each) and fit a learning curve. The fitted curve levels off at **98% of today's squared error** (90% bootstrap interval over patients: 93% to 99%). In RMSE terms, the curve flattens at about 32.5 mg/dL, barely below where the model is today.
+That makes a 5 × 5 grid of 25 **situations**. I call the new method the situation-based range (the figures say "band" for range).
 
-<Figure src="/projects/situation-aware-uncertainty/learning-curve.png" alt="Forecast RMSE against the share of training data used, flattening near 32.5 mg/dL" caption="AZT1D. The curve flattens well above the line for a 25% improvement. The model is not data-limited." />
+## Step 1: Is the forecast the thing to improve?
 
-### Error does not drift over time; it follows the patient
+This project grew out of my [replication of GLIMMER](/projects/azt1d-replication/), a published method that trains the forecast to care more about dangerous readings. It caught more dangerous events but made the forecast worse overall. Before looking for other ways to improve accuracy, I checked whether more data would help.
 
-Error did not grow from the validation period to the test period (median ratio 1.03). Where a patient's error did change, it tracked changes in that patient's glucose variability (correlation 0.77). The model is not going stale. Some stretches of a person's life are just harder to predict.
+I retrained each patient's model on 10% to 100% of their data and fit a curve to estimate where the error would level off. It flattens at about 32.5 mg/dL, barely below the error with all of today's data, so more data of the same kind would barely help this model. That doesn't prove the forecast can't improve (a different model or new kinds of data might). It did make me turn to the other half of the problem: how far to trust each forecast.
 
-### But predictability depends on the situation
+<Figure src="/projects/situation-aware-uncertainty/learning-curve.png" alt="Forecast error against the share of training data used, flattening near 32.5 mg/dL" caption="AZT1D dataset, 25 patients. Each dot is one training run (the legend calls these seeds). Error drops at first, then flattens well above the dotted line a 25% improvement would need." />
 
-Splitting the test windows into 25 situations shows large differences. A 60-minute forecast from a steady reading in range misses by about 26 mg/dL. From a reading above 250 and rising fast, it misses by 61.
+How far off the forecast gets depends a lot on the situation. From a steady reading in range, its average error is about 26 mg/dL. From above 250 and rising fast, it's about 61.
 
-<Figure src="/projects/situation-aware-uncertainty/predictability-map.png" alt="Two heatmaps over current glucose level and 30-minute trend: model RMSE per situation, and a noise upper bound as a share of model error" caption="Left: AZT1D forecast error per situation. Right: an upper bound on irreducible noise from look-alike windows (nearly identical inputs at least an hour apart), as a share of model error. Most cells sit near or above 100%." />
+<Figure src="/projects/situation-aware-uncertainty/predictability-map.png" alt="Grid of typical forecast error for each combination of current level and 30-minute direction" caption="Average forecast error (mg/dL) in each of the 25 situations, AZT1D. Darker means harder. n is the number of forecasts in that cell." />
 
-The right panel was a direct test of headroom: if windows that look the same diverge as much as the model's errors, the model cannot do much better. The bound came out at 106% of model error overall. That is consistent with little headroom, but the bound is too loose to prove it, so I record it as **inconclusive**. A later simulation showed why it is loose: sensor noise corrupts the inputs as well as the target, so error-based noise estimates overstate it.
+A range with one width everywhere, or one that only reacts to recent misses, can't follow differences this large.
 
-<Callout type="result" title="Takeaway from Part 1">
-The forecaster is near what this data supports, and how wrong it gets depends strongly on the glucose situation. So the useful lever is not a better point forecast. It is uncertainty that knows which situation it is in.
-</Callout>
+## Step 2: Make the range keep its promise
 
-## Part 2: Situation-aware uncertainty bands
+### What goes wrong today
 
-### The problem with standard bands
+A common way to draw the range is GARCH, a method borrowed from finance that widens the range after recent large misses. Across all readings, its 80% range caught slightly more than 80% (82 to 83%). Broken down by situation, it ranged from 64% (in range, rising fast) to 95% (under 70, falling fast) on the AZT1D data.
 
-A standard band (here GARCH, a volatility model, or plain conformal prediction) is sized from the model's recent or overall errors. It can be right on average and still be wrong where it matters. On AZT1D, a GARCH "80%" band caught anywhere from **64%** of readings (in range, rising fast) to **95%** (under 70, falling fast). The first is false reassurance. The second produces alarms nobody needs.
+<Figure src="/projects/situation-aware-uncertainty/three-bands.png" alt="One day of one patient's blood sugar with the same forecast and two differently drawn 80% ranges" caption="One OhioT1DM patient's most variable day. Black: what actually happened. Top: the GARCH range (grey). Bottom: the situation-based range (blue). Orange dots: readings that fell outside. On a single day the two catch similar shares, and neither catches the big spike. The difference shows up when you count catches by situation over many days, as in the next figures. Widths in the panel titles are for this patient only." />
 
-<Figure src="/projects/situation-aware-uncertainty/three-bands.png" alt="24 hours of one patient's glucose with the same forecast drawn under three 80% bands" caption="One OhioT1DM patient, same forecast, three ways to size the 80% band. Orange dots are readings that fell outside. Note the fast rise near 12:00 and the fast fall near 15:00." />
+### The fix
 
-### The method
-
-The fix is simple, and it is a known method: **group-conditional (Mondrian) conformal prediction**. Each test window is assigned to one of 25 situations: 5 glucose levels (under 70, 70–120, 120–180, 180–250, 250+) by 5 trends over the last 30 minutes (fast fall, slow fall, flat, slow rise, fast rise). Each situation gets its own band width from its own validation errors.
+For each patient and each of the 25 situations, I looked at how far off the forecast had been in that situation during an earlier stretch of the patient's data. Then I set the range just wide enough to cover 80% of those misses. The result is a lookup table of 25 widths per patient: wide when blood sugar is rising fast, narrow when it's steady. It's a table lookup, so it is cheap enough to run on a phone or a pump.
 
 ```mermaid
 flowchart LR
-  A[2-hour window] --> B[CNN-LSTM]
-  B --> C[Forecast ŷ]
-  A --> D[Situation g<br/>level × 30-min trend]
-  E[Validation errors<br/>in situation g] --> F[Width q_g]
-  D --> F
-  C --> G[Band ŷ ± q_g]
-  F --> G
+  A[Last 2 hours of readings] --> B[Forecast model]
+  B --> C[Forecast for 1 hour ahead]
+  A --> D[Which of the 25 situations?]
+  D --> E[Look up that situation's width,<br/>set from its past misses]
+  C --> F[Forecast ± width]
+  E --> F
 ```
 
-$$
-q_g = \text{Quantile}_{0.8}\big(\,|y_i - \hat{y}_i| \;:\; i \in \text{validation},\ g_i = g\,\big), \qquad \text{band} = \hat{y} \pm q_g
-$$
+The technique itself isn't new; statisticians call it Mondrian conformal prediction. The new part is measuring where glucose forecast ranges go wrong and testing this fix on many datasets.
 
-Situations with fewer than 100 validation windows fall back to the pooled width. The novelty is not the method. It is showing that glucose forecast bands are systematically miscalibrated by situation, and that this simple grouping fixes it.
+### Results on data the method wasn't designed on
 
-### Result on data the method never saw
+I built the method on AZT1D (25 patients), then checked it on OhioT1DM (12 patients). There, the catch rate per situation went from 6.7 points off 80%, on average, to 3.9. It came closer in 19 of 24 situations and for 9 of the 12 patients, and the range did not get wider (it averaged 87 mg/dL, against GARCH's 99, mostly because GARCH ran slightly wide overall).
 
-I designed the method on AZT1D, then tested it once on OhioT1DM.
+<Figure src="/projects/situation-aware-uncertainty/cover.png" alt="Catch rate per situation for the GARCH range and the situation-based range, plus four everyday situations" caption="OhioT1DM. Left: each dot is one situation; the shaded strip is 75 to 85%. GARCH is scattered from 60% to 93%, while the situation-based range sits close to 80%. Right: four common moments." />
 
-<Figure src="/projects/situation-aware-uncertainty/cover.png" alt="Per-situation coverage dots for GARCH and situation-aware bands, and bars for four everyday situations" caption="OhioT1DM, 12 patients. Left: each dot is one situation. GARCH ranges from 60% to 93%; situation-aware bands cluster near 80%. Right: four everyday situations." />
+I went on to run more tests on OhioT1DM, so it stopped being untouched data. For a clean test, after the design was fixed, I ran the method on 8 studies (20 randomly chosen patients each, 13 in one) from [MetaboNet](https://arxiv.org/abs/2601.11505), a collection of public diabetes datasets. They cover children and adults, three sensor brands, and both automated and non-automated insulin delivery. The situation-based range was closer to 80% in all 8.
 
-<Metrics items={[
-  { label: "Distance from 80%, GARCH → situation-aware", value: "6.7 → 3.9" },
-  { label: "Patients closer to 80%", value: "9 of 12" },
-  { label: "Average width (mg/dL)", value: "99 → 87" },
-]} />
+<Figure src="/projects/situation-aware-uncertainty/external-validation.png" alt="For each of 8 outside studies, distance from 80% for GARCH (about 5.5 to 6.8 points) and the situation-based range (about 2.3 to 4.2 points)" caption="Each row is one outside study. Grey: GARCH. Blue: the situation-based range. My pass bar, set before running, was at least 20% better in 6 of the 8 studies. Every study passed, at 29% to 67% better." />
 
-The bands got more honest and narrower at the same time.
+### Checking it wasn't luck
 
-<Figure src="/projects/situation-aware-uncertainty/fresh-data-check.png" alt="Dumbbell chart of distance from 80% per situation, and bars per patient" caption="Left: every situation, GARCH (grey) vs situation-aware (blue); green means the new band got closer to 80%. Right: per patient." />
-
-### Stress tests
-
-A result like this can come from luck or from a side effect, so I ran four checks, each with its rule set in advance:
-
-| Check | Question | Result |
+| Check | What it rules out | Result |
 | --- | --- | --- |
-| **Shuffled groups** | Is it the situations, or just splitting calibration into 25 groups? | Real situations 4.0 points; 20 random groupings of the same sizes 6.6 to 6.9. **Supported** |
-| **Other models** | Does it depend on the CNN-LSTM? | 23% to 47% better than GARCH for a GLIMMER-weighted CNN-LSTM and a CNN-Transformer, on both datasets. **Supported** |
-| **Patient bootstrap** | Is it a few lucky patients? | 1,000 resamples of patients: 90% interval for the gain is 0.3 to 3.6 points, above zero. **Supported** |
-| **Strong baseline** | Does a tuned conformalized quantile regression (CQR) that sees the full input window do as well? | AZT1D: 3.8 vs 8.9 points, clearly better. OhioT1DM: 4.0 vs 4.9, but the bootstrap interval crosses zero. **Supported, not robust on OhioT1DM** |
+| Shuffled groups | That any split into 25 groups would help | Real situations: 4.0 points off (a slightly different run than the 3.9 above). 20 random splits of the same sizes: 6.6 to 6.9 |
+| Other models | That it only works with one forecast model | 23% to 47% better than GARCH with two other models, on two datasets |
+| Resampled patients | That a few patients drive the result | 90% interval for the improvement: 0.3 to 3.6 points, above zero |
+| A tuned, more flexible rival (CQR) | That a learned method does as well | Clearly better on AZT1D (3.8 vs 8.9). On OhioT1DM 4.0 vs 4.9, within the margin of chance |
 
-<Figure src="/projects/situation-aware-uncertainty/shuffle-check.png" alt="Real situations at 4.0 points against 20 shuffled groupings between 6.6 and 6.9" caption="The grouping itself carries the information. Random groups of the same sizes do no better than ordinary bands." />
+### Where it falls short
 
-### What it does not do
+- **Overall, it catches about as many readings as other methods of the same width** (0.1 to 1.8 points more). The gain is that each situation gets close to 80%.
+- **It misses more of the worst forecast errors.** The most dangerous case is a forecast that says "fine" when the real reading is low or high (zone D on the Clarke error grid, a standard clinical chart). GARCH catches more of these, partly because its range is wider in those moments (105 vs 86 mg/dL on OhioT1DM). Combining the two closes most of the gap, but not all of it.
+- **Several pre-set targets failed.** On AZT1D, 18 of 25 situations landed between 75% and 85% (I had required 20). On OhioT1DM, it beat a simpler version of CQR by 18%, short of the 20% I had set. Combining it with GARCH did not close the zone D gap to within 5 points. And on simulated patients, where I planted noise of known size, it was less accurate than GARCH (7.0 vs 4.6 points), though those patients were much easier to forecast than real ones.
 
-Two results limit the claim, and I report them alongside it.
+<Figure src="/projects/situation-aware-uncertainty/zone-d.png" alt="Share of readings inside the range for each Clarke zone, for three methods" caption="The 80% promise is an average over all readings, so easy, accurate forecasts (zone A) are caught almost always and the hard ones less often. Zone D (right-hand group in each panel) holds the dangerous misses. OhioT1DM: GARCH catches 62%, situation-based 41%, combined 54%. AZT1D: 39%, 22%, 34%." />
 
-- **It is not more efficient overall.** At equal average width, every band method catches about the same share of readings (situation-aware bands catch 0.1 to 1.8 points more than GARCH). CQR has the best interval score; situation-aware bands are a close second. The claim is per-situation calibration, not overall efficiency.
-- **It catches fewer of the rare dangerous misses.** In Clarke zone D (a real danger event forecast as normal), GARCH's band catches more, because it widens after recent large errors. Combining the two (GARCH scaled within each situation) recovers most of the gap, but not all of it.
+## Step 3: Are level and direction the right grid?
 
-<Figure src="/projects/situation-aware-uncertainty/zone-d.png" alt="Share of points inside the band per Clarke zone for GARCH, situation-aware, and the combined band" caption="Zone D catch rate. OhioT1DM: GARCH 62%, situation-aware 41%, combined 54%. AZT1D: 39%, 22%, 34%. Calibrated by situation is not the same as calibrated by error size." />
+I chose the 25-situation grid by hand. To test that choice, I trained a neural network to compress each two-hour window (blood sugar, insulin, carbs, and on one dataset heart rate, steps, and calories) into just 8 numbers. A second network then used those 8 numbers to predict the next hour. Nothing told the first network about level or direction. If it found something more useful, like meal timing or insulin action, it could keep that instead.
 
-## Part 3: What a learned encoder sees
+When I plotted the 8-number summaries, they sorted by current level first and then, within each level, by direction. On the HUPA-UCM dataset, knowing just the level and direction was enough to rebuild 87% of what the network had stored. The rest added almost nothing: dropping it barely changed the second network's predictions.
 
-The 25 situations are hand-drawn. Is level and trend really what matters, or did I impose it? To find out, I trained an encoder to summarize each 2-hour window into **8 numbers** with no hint about level or trend. A decoder then predicts the next hour from that summary, step by step (teacher-forced, so it also sees each true previous reading). The summary is the only view it gets of the 2-hour past.
+<Figure src="/projects/situation-aware-uncertainty/encoder-tsne.png" alt="2D map of the network's 8-number summaries, colored by current level and by 30-minute direction, for two datasets" caption="The point: windows group by level first, then by direction. Each dot is one two-hour window, placed so that windows with similar summaries sit close together. Left: colored by level, which forms clear regions. Right: colored by direction, which forms stripes inside those regions (clearer in the top dataset, AZT1D, than in the bottom one, HUPA-UCM)." />
 
-```mermaid
-flowchart LR
-  A[2-hour window<br/>glucose, insulin, carbs<br/>+ HR, steps, calories on HUPA-UCM] --> B[GRU encoder]
-  B --> C[8-number summary]
-  C --> D[GRU decoder<br/>teacher-forced]
-  D --> E[Next hour of glucose]
-```
+Some of this follows from the setup: to predict the next hour, the most useful things to know are where blood sugar is now and which way it's heading. That matches the hand-drawn grid. Grouping moments by the network's summary instead of the grid gave no better ranges.
 
-If the summary carries information beyond the current situation (meal timing, insulin action, the patient's physiology), it should show up here.
+Speed of change also explains why some people are harder to forecast than others. Across 215 patients in 11 studies, the typical size of a person's 30-minute changes predicted their forecast error better than how widely their blood sugar ranges overall. Part of this is expected, since a one-hour forecast has more ground to cover when blood sugar moves fast. Children had larger errors, but the gap disappeared once speed of change was taken into account.
 
-### The summary organizes itself by level, then direction
+## What I'd build with this
 
-On both AZT1D and HUPA-UCM, the first principal component of the summary correlates 0.99 with current glucose and holds about 95% of its variance. Mapped in 2D, windows sort into regions by level, and within each region they line up by 30-minute trend.
+- **Use the situation grid for the range.** It is easy to explain to a patient or clinician ("the range is wider because you're rising fast"), cheap to run, and it held in every outside study.
+- **Add a slow per-person adjustment.** Some people's ranges stay a bit too wide or too narrow. Nudging each person's range as their misses come in fixed that in all 8 outside studies. Doing it separately at each glucose level also kept the situations even in 6 of 8. This is the current focus of the research.
+- **Use the range to show trust, and test alarms separately.** In an earlier test, an alarm based on a GARCH range went off more often than a tuned threshold on the forecast itself (10.2 vs 7.7 alarms a day), while catching somewhat more real events (73% vs 67%). I haven't yet tested the situation-based range for alarms.
 
-<Figure src="/projects/situation-aware-uncertainty/encoder-tsne.png" alt="t-SNE of the 8-number encoder summary colored by glucose level, by trend, and by full situation, for AZT1D and HUPA-UCM" caption="t-SNE of the encoder summary. Columns: colored by current level, by 30-minute trend, and by full situation. The encoder recovers the situation grid on its own." />
+## Details for researchers
 
-### Level and trend explain 87%, and the rest is not useful
-
-I predicted the summary from current level and trend alone (gradient boosting, cross-fitted with folds by patient). Level and trend explain **87%** of its variance. When the decoder gets only the level-and-trend part, its next-hour error barely moves: 5.77 → 5.85 mg/dL (vs 17.07 with the summary removed).
-
-<Gallery
-  columns={2}
-  caption="Left: share of the summary explained by level and trend (the pre-set rule expected under 70%). Right: the decoder barely needs the leftover, and the leftover does not help predict how wrong the forecaster will be."
-  images={[
-    { src: "/projects/situation-aware-uncertainty/level-trend-share.png", alt: "87% of the summary is level and trend; the 13% leftover has two main directions" },
-    { src: "/projects/situation-aware-uncertainty/leftover-error.png", alt: "Decoder error with full summary, level-and-trend only, and zeroed; and error-size prediction with and without the leftover" },
-  ]}
-/>
-
-The remaining 13% mostly reflects which patient and which pump settings: basal rate explains 21% of it and heart rate 12%. Meals, insulin on board, and curve shape explain nothing for new patients. Adding the leftover improved prediction of the forecaster's error size by only 1.2%. Encoder-learned groupings used as band groups tied the hand-drawn grid, and were less calibrated per situation.
-
-<Callout type="result" title="Takeaway from Part 3">
-Given 2 hours of data and asked to predict the next hour, a neural encoder keeps mostly two things: where glucose is and which way it is heading. That is why a simple level × trend grid works for sizing uncertainty, and why a learned one does not beat it.
-</Callout>
-
-One finding cuts the other way. For a patient the model has never seen, level and trend do not predict the size of the forecast error any better than a constant (20.23 vs 20.13 mg/dL). Situation matters within a patient, but how hard a patient is to forecast is set more by who they are, mostly their glucose variability. That points to the next step: separating patient, situation, and time in one variance decomposition across datasets.
-
-## Takeaways
-
-- **Accuracy is near its ceiling for this data.** More data of the same kind would cut error by about 2%. The better question is how far to trust each forecast.
-- **Standard uncertainty bands are wrong in specific situations.** An "80%" band caught as little as 60% or as much as 95% of readings, depending on whether glucose was steady, rising, or falling.
-- **Sizing bands by situation fixes this, on data it was never tuned on.** Closer to 80% (6.7 → 3.9 points) and narrower (99 → 87 mg/dL), and it holds against shuffled groups, other models, and patient resampling.
-- **The claim has limits.** It is not more efficient overall, and it catches fewer rare dangerous misses than a volatility-based band.
-- **Level and direction are what the model has to work with.** A self-supervised encoder rediscovers the situation grid, and what it keeps beyond it is mostly patient identity.
-
-Everything, including the pre-registered hypotheses, the negative results, and every figure on this page, is in the [repository](https://github.com/TomerWeissman/capstone).
+- **Data.** [AZT1D](https://doi.org/10.17632/gk9m674wcx.1) (25 patients), OhioT1DM (12), HUPA-UCM (25). External panel from MetaboNet: Loop, DCLP3, DCLP5, PEDAP, Flair, IOBP2, ReplaceBG, BrisT1D (153 patients). CGM at 5-minute resolution.
+- **Forecaster.** One CNN-LSTM per patient, one seed per patient. A second-seed rerun on AZT1D and OhioT1DM gave similar results, though on OhioT1DM the situation range stayed 1.9 points above the noise floor, past my 1.5 threshold. 2-hour input of 6 features (glucose, basal and bolus insulin, carbs, a 200-reading moving average of glucose, and a glucose-region label), 60-minute horizon. Each patient's record is split in time order into training, calibration, and test periods. The test period is never used for fitting, calibration, or early stopping. External-panel forecasters were trained the same way.
+- **Bands.** Group-conditional (Mondrian) split conformal on absolute residuals, so bands are symmetric. Groups are the 5 × 5 level × 30-minute-change grid, with change bins at ±10 and ±30 mg/dL. The width is the ⌈(n+1)·0.8⌉-th smallest calibration residual in the group; groups with fewer than 100 calibration windows use the pooled width. Coverage here is empirical. CGM residuals are autocorrelated, so the exchangeability behind the finite-sample guarantee does not strictly hold.
+- **Score.** For each situation with at least 30 test windows, the absolute gap between test coverage and 80%, averaged over situations. I also estimate a sampling-noise floor by circularly shifting situation labels within each patient. Situation bands sit at the floor on AZT1D and HUPA-UCM and about 1.6 points above it on OhioT1DM.
+- **Baselines.** GARCH(1,1) fit on each patient's calibration residuals, plain split conformal (pooled and per patient), and gradient-boosted CQR. On interval score, CQR was best and situation bands a close second.
+- **Robustness.** The shuffle and patient-bootstrap checks were run on OhioT1DM. The external result is a count of studies (8 of 8) with no interval on the per-study gains, and GARCH × situation bands were as good or better in 5 of the 8. Errors quoted on this page are RMSE. A single per-patient scale met all three of its targets in only 2 of 8 outside studies; the per-level version met them in 6 of 8.
+- **Encoder.** GRU encoder to an 8-dimensional bottleneck, GRU decoder with teacher forcing over the next hour. Because of teacher forcing, its error (about 6 mg/dL) is not comparable to the forecaster's. The 87% is cross-fitted R² from gradient boosting on level and trend, with folds by patient (HUPA-UCM, 7 inputs). Of the remaining 13%, basal rate explained about a fifth; meals and insulin doses explained almost none.
+- **Patient difficulty.** Log RMSE regressed on log glucose SD and on log SD of 30-minute changes; leave-one-study-out R² 0.44 and 0.59 (0.63 with both). The child effect fell from +7.5% to +0.4% (90% interval -4.5% to +5.0%) after adding rate variability.
+- **Records.** Every hypothesis, including the failed ones, is in [HYPOTHESES.md](https://github.com/TomerWeissman/capstone/blob/master/work/HYPOTHESES.md). The findings, with evidence tiers, are in [FINDINGS.md](https://github.com/TomerWeissman/capstone/blob/master/work/FINDINGS.md).
